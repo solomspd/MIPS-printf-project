@@ -40,8 +40,6 @@ sb $t1, 0($t2) # save new char to string buffer
 
 j new_char
 
-exit:
-
 
 char_is_per:
 move $t3, $0 # reset buffer string count
@@ -54,12 +52,19 @@ li $v0, 4
 syscall
 
 # register with datatype is t1 
-# # #
 
-# # CASES CHECKS GO HERE # #
-
-# # #
+beq $t1, 100, case_d
+beq $t1, 117, case_u
+beq $t1, 98, case_b
+beq $t1, 120, case_x
+beq $t1, 88, case_X
+beq $t1, 111, case_o
+beq $t1, 99, case_c
+beq $t1, 115, case_s
 
 j next_char
 
+
+exit:
+jr $ra
 
