@@ -1,4 +1,10 @@
 .data
 
+outbuff: .space 10000
+
+
 .text
 main:
+
+# t0: number of arguments
+# $s0: adress of stringin
