@@ -2,7 +2,7 @@
 
 outbuff: .space 10000
 
-
+#this is our code
 .text
 main:
 
