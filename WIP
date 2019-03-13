@@ -1,10 +1,65 @@
 .data
 
 outbuff: .space 10000
+data_types: .space 1000
 
-#this is our code
 .text
 main:
 
-# t0: number of arguments
+
+
+# $t0: number of arguments
 # $s0: adress of stringin
+# $s2: adress of buffer string to output
+# $t3: counter since last reset
+la $s0, in_string
+la $s2, outbuff
+
+
+
+move $t0, $0 # $t0 = 0. to start count of args
+move $t3, $0 # t3 = 0. to start temporary count of buffer string
+
+# t1 is temporary char to evaluate
+
+new_char:
+
+lb $t1, 0($s0) # load new char
+beq $t1, 0, exit # if end of string, exit
+addi $s0, $s0, 1 # increment in string adress
+addi $t3 , $t3, 1 # increment $t3 to keep track of length of string buffer
+beq $t1, 37, char_is_per # character is %
+next_char:
+add $t2, $t3, $s2 # new adress of buffer string to write
+
+addi $t3, $t3, 1 # increment string buffer counter
+
+sb $t1, 0($t2) # save new char to string buffer
+
+
+
+j new_char
+
+exit:
+
+
+char_is_per:
+move $t3, $0 # reset buffer string count
+addi $s0, $s0, 1 # increment in string pointer once more to get to data type
+lb $t1, 0($s0) # get character that declared datatype
+addi $t0, $t0, 1 # increment number of arguments
+
+move $a0, $s2
+li $v0, 4
+syscall
+
+# register with datatype is t1 
+# # #
+
+# # CASES CHECKS GO HERE # #
+
+# # #
+
+j next_char
+
+
