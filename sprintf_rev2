@@ -1,0 +1,268 @@
+.data
+
+in_string: .asciiz "this int is a test %d blabla"
+var1: .word 42
+outbuff: .space 10000
+data_types: .space 1000
+
+.text
+main:
+la $a0, in_string
+lw $a1, var1
+jal printf
+li $v0, 4
+move $a0, $s7
+syscall
+li $v0, 10
+syscall
+
+
+printf:
+
+# $t0: number of arguments
+# $s0: adress of stringin
+# $t3: counter since last reset
+move $s0, $a0
+la $s2, outbuff
+move $s7, $s2
+move $t0, $0 # $t0 = 0. to start count of args
+
+# t1 is temporary char to evaluate
+
+new_char:
+
+lb $t1, 0($s0) # load new char
+beq $t1, 0, exit # if end of string, exit
+beq $t1, 37, char_is_per # character is %
+sb $t1, 0($s2) # save new char to string buffer
+addi $s2, $s2, 1 # increment outbuff adress
+addi $s0, $s0, 1 # increment in string adress
+
+
+
+j new_char
+
+
+char_is_per:
+
+#addi $s0, $s0, 1 # increment in string pointer once more to get to data type
+addi $s0, $s0, 1 # increment in string
+lb $t1, 0($s0) # get character that declares datatype
+addi $s0, $s0, 1 # increment in string
+addi $t0, $t0, 1 # increment number of arguments
+
+# argument allocation
+
+beq $t0, 2, set_arg_2
+beq $t0, 3, set_arg_3
+bge $t0, 4, set_arg_stack
+
+end_args:
+
+# register with datatype is t1 
+
+# evaluates to which case to run
+
+beq $t1, 100, case_d
+beq $t1, 117, case_u
+beq $t1, 98, case_b
+beq $t1, 120, case_x
+beq $t1, 88, case_X
+beq $t1, 111, case_o
+beq $t1, 99, case_c
+beq $t1, 115, case_s
+
+end_cases:
+
+j new_char
+
+
+exit:
+jr $ra
+
+
+
+
+
+set_arg_2:
+move $a1, $a2
+j end_args
+
+
+set_arg_3:
+move $a1, $a3
+j end_args
+
+set_arg_stack:
+lw $a1, 0($sp)
+addi $sp, $sp, -4
+
+
+
+
+
+
+case_d:
+
+srl $a0, $a1, 31
+bne $a0, $0, is_1_d
+end_is_1_d:
+
+move $t5, $0
+loop_d:
+div $a1, $a1, 10
+addi $t5, $t5, 1
+addi $sp, $sp, -4
+mfhi $a0
+sw $a0, 0($sp)
+bne $a1, 0, loop_d
+
+loop_2_d:
+lw $a0, 0($sp)
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+addi $sp, $sp, 4
+addi $t5, $t5, -1
+bgt $t5, $0, loop_2_d
+
+j end_cases
+
+is_1_d:
+li $t5, 45
+addi $s2, $s2, 1
+sb $s5, 0($s2)
+j end_is_1_d
+
+
+
+
+
+
+
+case_u:
+
+move $t5, $0
+loop_u:
+divu $a1, $a1, 10
+addi $t5, $t5, 1
+addi $sp, $sp, -4
+mfhi $a0
+sw $a0, 0($sp)
+bne $a1, 0, loop_d
+
+loop_2_u:
+lw $a0, 0($sp)
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+addi $sp, $sp, 4
+addi $t5, $t5, -1
+bgt $t5, $0, loop_2_d
+
+j end_cases
+
+
+
+
+case_b:
+li $t5, 32 # counter to shift by
+
+loop_b:
+
+srlv $a0, $a1, $t5 #shift right by counter
+addi $t5, $t5, -1 # decrement coutner
+and $a0, $a0, 1 # value to operate on
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+bge $t5, $0, loop_b
+
+j end_cases
+
+
+
+case_x:
+li $t5, 32 # counter to shift by
+
+loop_x:
+
+srlv $a0, $a1, $t5 # shift right by counter
+addi $t5, $t5, -4 # decrement coutner
+beq $a0, $0, loop_x
+and $a0, $a0, 0xf # value to operate on
+bge $a0, 10, is_alpha_x
+addi $a0, $a0, 48
+end_is_alpha_x:
+addi $s2, $s2, 1
+sb $a0, 0($s2)
+bge $t5, $0, loop_x
+
+j end_cases
+
+is_alpha_x:
+addi $a0, $a0, 87
+j end_is_alpha_x
+
+
+
+
+
+case_X:
+li $t5, 32 # counter to shift by
+
+loop_X:
+
+srlv $a0, $a1, $t5 # shift right by counter
+addi $t5, $t5, -4 # decrement coutner
+beq $a0, $0, loop_X
+and $a0, $a0, 0xf # value to operate on
+bge $a0, 10, is_alpha_X
+addi $a0, $a0, 48
+end_is_alpha_X:
+addi $s2, $s2, 1
+sb $a0, 0($s2)
+bge $t5, $0, loop_X
+
+j end_cases
+
+is_alpha_X:
+addi $a0, $a0, 55
+j end_is_alpha_X
+
+
+
+
+case_o:
+
+srl $a0, $a1, 30
+andi $a0, $a0, 3
+syscall
+
+li $t5, 29 # counter to shift by
+loop_o:
+
+srlv $a0, $a1, $t5 
+addi $t5, $t5, -3
+beq $a0, $0, loop_o
+andi $a0, $a0, 7
+addi $a0, $a0, 48
+addi $s2, $s2, 1
+sb $a0, 0($s2)
+bge $t5, $0, loop_o
+j end_cases
+
+
+
+case_c:
+andi $a0, $a1, 0xff
+addi $s2, $s2, 1
+sb $a0, 0($s2)
+
+j end_cases
+
+case_s:
+move $a0, $a1
+
+
+j end_cases
+
