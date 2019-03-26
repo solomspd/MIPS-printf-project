@@ -1,0 +1,373 @@
+.data
+
+in_string: .asciiz "sprintf (\"the variaable a in decimal %d the variable b in hex(small) %x same varible in hex(big) %x. print string in c: %s. varible a again in unsigned %u. d in character %c. d in octal %o. e in  unsigned %u\", a, b, b, c, a, d, d, e)"
+a: .word -42
+ba: .word 120
+c: .asciiz "\"i need sleep\""
+d: .word 1337
+e: .word 8989
+outbuff: .space 10000
+
+
+.text
+main:
+la $a1, in_string
+la $a0, outbuff
+
+lw $t5, a
+lw $t6, ba
+la $t7, c
+lw $t8, d
+lw $t9, e
+
+jal printf
+move $a0, $v0
+li $v0, 4
+syscall
+li $v0, 10
+syscall
+
+
+printf:
+
+move $t0, $0 # $t0 = 0. to start count of args
+move $s0, $a1
+set_format:
+lb $t4, 0($a1)
+addi $a1, $a1, 1
+beq $t4, 34, is_quote
+
+j set_format
+
+is_quote:
+lb $t4, 0($a1)
+beq $t4, 34, end_quote
+sb $t4, -10($a1)
+addi $a1, $a1, 1
+j is_quote
+
+end_quote:
+sb $0, -10($a1)
+addi $a1, $a1, 1
+lb $t4, 0($a1)
+bgt $t4, 45, found_var
+beq $t4, $0, end_parse
+j end_quote
+
+found_var:
+addi $sp, $sp, -4
+addi $t0, $t0, 1 # increment number of arguments
+beq $t4, 97, case_a_parse
+beq $t4, 98, case_b_parse
+beq $t4, 99, case_c_parse
+beq $t4, 100, case_d_parse
+beq $t4, 101, case_e_parse
+j end_quote
+
+
+case_a_parse:
+
+sw $t5, 0($sp)
+j end_quote
+
+
+case_b_parse:
+
+sw $t6, 0($sp)
+j end_quote
+
+
+case_c_parse:
+
+sw $t7, 0($sp)
+j end_quote
+
+
+case_d_parse:
+
+sw $t8, 0($sp)
+j end_quote
+
+
+case_e_parse:
+
+sw $t9, 0($sp)
+j end_quote
+
+
+end_parse:
+addi $t0, $t0, -1
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+
+
+# $t0: number of arguments
+# $s0: adress of stringin
+
+move $s2, $a0
+move $s7, $s2
+
+
+# t1 is temporary char to evaluate
+
+new_char:
+
+lb $t1, 0($s0) # load new char
+beq $t1, 0, exit # if end of string, exit
+beq $t1, 37, char_is_per # character is %
+sb $t1, 0($s2) # save new char to string buffer
+addi $s2, $s2, 1 # increment outbuff adress
+addi $s0, $s0, 1 # increment in string adress
+
+
+
+j new_char
+
+
+char_is_per:
+
+
+addi $s0, $s0, 1 # increment in string
+lb $t1, 0($s0) # get character that declares datatype
+addi $s0, $s0, 1 # increment in string
+
+
+# argument allocation
+
+lw $a1, 0($sp)
+addi $sp, $sp, -4
+
+end_args:
+
+# register with datatype is t1 
+
+# evaluates to which case to run
+
+beq $t1, 100, case_d
+beq $t1, 117, case_u
+beq $t1, 98, case_b
+beq $t1, 120, case_x
+beq $t1, 88, case_X
+beq $t1, 111, case_o
+beq $t1, 99, case_c
+beq $t1, 115, case_s
+
+end_cases:
+
+j new_char
+
+
+exit:
+sb $0, 1($s2)
+move $v0, $s7
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+jr $ra
+
+
+
+
+
+
+
+case_d:
+
+srl $a0, $a1, 31
+addi $sp, $sp, -4
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+bne $a0, $0, is_1_d
+end_is_1_d:
+
+move $t5, $0
+loop_d:
+div $a1, $a1, 10
+addi $t5, $t5, 1
+addi $sp, $sp, -4
+mfhi $a0
+sw $a0, 0($sp)
+bne $a1, 0, loop_d
+
+loop_2_d:
+lw $a0, 0($sp)
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+addi $sp, $sp, 4
+addi $t5, $t5, -1
+bgt $t5, $0, loop_2_d
+addi $sp, $sp, 4
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+j end_cases
+
+is_1_d:
+li $t5, 45
+xori $a1, $a1, 0xffffffff
+addi $a1, $a1, 1
+sb $t5, 0($s2)
+addi $s2, $s2, 1
+j end_is_1_d
+
+
+
+
+
+
+
+case_u:
+
+move $t5, $0
+addi $sp, $sp, -4
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+sub $sp, $sp, $t0
+loop_u:
+divu $a1, $a1, 10
+addi $t5, $t5, 1
+addi $sp, $sp, -4
+mfhi $a0
+sw $a0, 0($sp)
+bne $a1, 0, loop_d
+
+loop_2_u:
+lw $a0, 0($sp)
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+addi $sp, $sp, 4
+addi $t5, $t5, -1
+bgt $t5, $0, loop_2_d
+addi $sp, $sp, 4
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+add $sp, $sp, $t0
+j end_cases
+
+
+
+
+case_b:
+li $t5, 31 # counter to shift by
+
+loop_b:
+
+srlv $a0, $a1, $t5 #shift right by counter
+addi $t5, $t5, -1 # decrement coutner
+beq $a0, $0, loop_b
+and $a0, $a0, 1 # value to operate on
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+bge $t5, $0, loop_b
+
+j end_cases
+
+
+
+case_x:
+li $t5, 28 # counter to shift by
+
+loop_x:
+
+srlv $a0, $a1, $t5 # shift right by counter
+addi $t5, $t5, -4 # decrement coutner
+beq $a0, $0, loop_x
+and $a0, $a0, 0xf # value to operate on
+bge $a0, 10, is_alpha_x
+addi $a0, $a0, 48
+end_is_alpha_x:
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+bge $t5, $0, loop_x
+
+j end_cases
+
+is_alpha_x:
+addi $a0, $a0, 87
+j end_is_alpha_x
+
+
+
+
+
+case_X:
+li $t5, 28 # counter to shift by
+
+loop_X:
+
+srlv $a0, $a1, $t5 # shift right by counter
+addi $t5, $t5, -4 # decrement coutner
+beq $a0, $0, loop_X
+and $a0, $a0, 0xf # value to operate on
+bge $a0, 10, is_alpha_X
+addi $a0, $a0, 48
+end_is_alpha_X:
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+bge $t5, $0, loop_X
+
+j end_cases
+
+is_alpha_X:
+addi $a0, $a0, 55
+j end_is_alpha_X
+
+
+
+
+case_o:
+
+li $t5, 30 # counter to shift by
+srl $a0, $a1, 29
+andi $a0, $a0, 3
+beq $a0, $0, loop_o
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+
+loop_o:
+
+srlv $a0, $a1, $t5 
+addi $t5, $t5, -3
+beq $a0, $0, loop_o
+andi $a0, $a0, 7
+addi $a0, $a0, 48
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+bge $t5, $0, loop_o
+j end_cases
+
+
+
+case_c:
+andi $a0, $a1, 0xff
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+
+j end_cases
+
+case_s:
+
+
+loop_S:
+lb $a0, 0($a1)
+addi $a1, $a1, 1
+beq $a0, $0, end_loop_s
+sb $a0, 0($s2)
+addi $s2, $s2, 1
+j loop_S
+
+end_loop_s:
+
+j end_cases
+
